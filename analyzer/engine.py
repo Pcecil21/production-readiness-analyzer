@@ -9,6 +9,13 @@ from analyzer.checks.observability import ObservabilityChecker
 from analyzer.checks.testing import TestingChecker
 from analyzer.checks.documentation import DocumentationChecker
 from analyzer.checks.operations import OperationsChecker
+from analyzer.checks.code_quality import CodeQualityChecker
+from analyzer.checks.release import ReleaseChecker
+from analyzer.checks.architecture import ArchitectureChecker
+from analyzer.checks.accessibility import AccessibilityChecker
+from analyzer.checks.api_design import ApiDesignChecker
+from analyzer.checks.developer_experience import DeveloperExperienceChecker
+from analyzer.checks.process import ProcessChecker
 
 CHECKER_MAP = {
     "security": SecurityChecker,
@@ -17,6 +24,13 @@ CHECKER_MAP = {
     "testing": TestingChecker,
     "documentation": DocumentationChecker,
     "operations": OperationsChecker,
+    "code_quality": CodeQualityChecker,
+    "release": ReleaseChecker,
+    "architecture": ArchitectureChecker,
+    "accessibility": AccessibilityChecker,
+    "api_design": ApiDesignChecker,
+    "developer_experience": DeveloperExperienceChecker,
+    "process": ProcessChecker,
 }
 
 

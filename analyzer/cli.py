@@ -7,11 +7,11 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from analyzer.engine import AnalysisEngine
+from analyzer.engine import AnalysisEngine, CHECKER_MAP
 from analyzer.config import load_config
 from analyzer.report import render_text_report, render_json_report
 
-VALID_CATEGORIES = ["security", "reliability", "observability", "testing", "documentation", "operations"]
+VALID_CATEGORIES = list(CHECKER_MAP.keys())
 
 console = Console()
 
@@ -22,8 +22,15 @@ console = Console()
 @click.option("--categories", default=None, help="Comma-separated list of categories to check.")
 @click.option("--config", "config_path", type=click.Path(), default=None, help="Path to .readiness.yml config.")
 @click.option("--threshold", type=int, default=None, help="Minimum overall score to pass (exit 0).")
-def main(path: str, fmt: str, categories: str | None, config_path: str | None, threshold: int | None):
+@click.option("--list-categories", is_flag=True, help="List all available check categories and exit.")
+def main(path: str, fmt: str, categories: str | None, config_path: str | None, threshold: int | None, list_categories: bool):
     """Analyze a codebase for production readiness."""
+    if list_categories:
+        console.print("[bold]Available categories:[/bold]")
+        for cat in VALID_CATEGORIES:
+            console.print(f"  {cat}")
+        return
+
     target = Path(path).resolve()
 
     # Load config
@@ -35,6 +42,7 @@ def main(path: str, fmt: str, categories: str | None, config_path: str | None, t
         invalid = [c for c in selected if c not in VALID_CATEGORIES]
         if invalid:
             console.print(f"[red]Unknown categories: {', '.join(invalid)}[/red]")
+            console.print(f"[dim]Valid: {', '.join(VALID_CATEGORIES)}[/dim]")
             sys.exit(2)
     else:
         selected = VALID_CATEGORIES

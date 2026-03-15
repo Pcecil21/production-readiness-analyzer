@@ -3,9 +3,12 @@
 import tempfile
 from pathlib import Path
 
-from analyzer.engine import AnalysisEngine
+from analyzer.engine import AnalysisEngine, CHECKER_MAP
 from analyzer.config import DEFAULT_CONFIG
 from analyzer.models import Severity
+
+
+ALL_CATEGORIES = list(CHECKER_MAP.keys())
 
 
 def _make_project(tmp: Path, files: dict[str, str]) -> Path:
@@ -71,3 +74,110 @@ def test_disabled_checks():
         result = engine.run()
         sec = result.categories["security"]
         assert all(f.check_id != "SEC-001" for f in sec.findings)
+
+
+def test_all_categories_run():
+    """Ensure every registered category can execute without errors."""
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "main.py").write_text("print('hello')")
+        (target / "README.md").write_text("# Test")
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ALL_CATEGORIES)
+        result = engine.run()
+        assert len(result.categories) == len(ALL_CATEGORIES)
+        for cat_name in ALL_CATEGORIES:
+            assert cat_name in result.categories
+            assert 0 <= result.categories[cat_name].score <= 100
+
+
+def test_code_quality_detects_long_files():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "big.py").write_text("\n".join(f"x = {i}" for i in range(600)))
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ["code_quality"])
+        result = engine.run()
+        cq = result.categories["code_quality"]
+        assert any(f.check_id == "CQ-001" for f in cq.findings)
+
+
+def test_code_quality_detects_sql_injection():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "db.py").write_text('cursor.execute("SELECT * FROM users WHERE id=" + user_id)')
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ["code_quality"])
+        result = engine.run()
+        cq = result.categories["code_quality"]
+        assert any(f.check_id == "CQ-004" for f in cq.findings)
+
+
+def test_release_detects_version():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "package.json").write_text('{"name": "test", "version": "1.0.0"}')
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ["release"])
+        result = engine.run()
+        rel = result.categories["release"]
+        assert all(f.check_id != "SHP-001" for f in rel.findings)
+
+
+def test_accessibility_skips_non_frontend():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "main.py").write_text("print('backend only')")
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ["accessibility"])
+        result = engine.run()
+        a11y = result.categories["accessibility"]
+        assert a11y.score == 100
+
+
+def test_api_design_skips_non_api():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "main.py").write_text("print('no api here')")
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ["api_design"])
+        result = engine.run()
+        api = result.categories["api_design"]
+        assert api.score == 100
+
+
+def test_process_detects_missing_ci():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "main.py").write_text("print('hello')")
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ["process"])
+        result = engine.run()
+        proc = result.categories["process"]
+        assert any(f.check_id == "PRC-003" for f in proc.findings)
+
+
+def test_developer_experience_detects_missing_linter():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "main.py").write_text("print('hello')")
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ["developer_experience"])
+        result = engine.run()
+        dx = result.categories["developer_experience"]
+        assert any(f.check_id == "DX-001" for f in dx.findings)
+
+
+def test_architecture_detects_no_config_management():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp)
+        (target / "main.py").write_text("print('hello')")
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ["architecture"])
+        result = engine.run()
+        arc = result.categories["architecture"]
+        assert any(f.check_id == "ARC-004" for f in arc.findings)
+
+
+def test_json_output():
+    """Ensure JSON serialization works for all categories."""
+    with tempfile.TemporaryDirectory() as tmp:
+        import json
+        target = Path(tmp)
+        (target / "main.py").write_text("print('hello')")
+        engine = AnalysisEngine(target, DEFAULT_CONFIG, ALL_CATEGORIES)
+        result = engine.run()
+        data = json.loads(json.dumps(result.to_dict()))
+        assert "overall_score" in data
+        assert len(data["categories"]) == len(ALL_CATEGORIES)
