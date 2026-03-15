@@ -1,10 +1,14 @@
 __pycache__/
 *.pyc
-.env
-config.yaml
-.production-ready/
+*.pyo
 *.egg-info/
 dist/
 build/
+.eggs/
 .venv/
 venv/
+.env
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
