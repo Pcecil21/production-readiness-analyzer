@@ -47,14 +47,16 @@ class AccessibilityChecker(BaseChecker):
             score -= 15
 
         # A11Y-002: Form inputs without labels
-        inputs = re.findall(r'<input\b[^>]*>', all_html, re.IGNORECASE)
-        inputs_without_label = [
-            t for t in inputs
-            if 'aria-label' not in t.lower()
-            and 'id=' not in t.lower()  # heuristic: id often pairs with <label for=>
-            and 'type="hidden"' not in t.lower()
-            and 'type="submit"' not in t.lower()
-        ]
+        # JSX inputs span multiple lines and may contain > in expressions,
+        # so we grab up to 500 chars after <input to catch all attributes.
+        inputs_without_label = []
+        for m in re.finditer(r'<input\b', all_html, re.IGNORECASE):
+            chunk = all_html[m.start():m.start() + 500].lower()
+            if 'aria-label' in chunk or 'id=' in chunk:
+                continue
+            if 'type="hidden"' in chunk or 'type="submit"' in chunk:
+                continue
+            inputs_without_label.append(chunk[:80])
         if inputs_without_label:
             findings.append(Finding(
                 check_id="A11Y-002",

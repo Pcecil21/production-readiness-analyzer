@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from analyzer.models import AnalysisResult, CategoryResult
+from analyzer.models import AnalysisResult, CategoryResult, Severity
 from analyzer.checks.security import SecurityChecker
 from analyzer.checks.reliability import ReliabilityChecker
 from analyzer.checks.observability import ObservabilityChecker
@@ -72,8 +72,19 @@ class AnalysisEngine:
                 continue
             checker = checker_cls(self.target, files, self.config)
             result = checker.run()
-            # Filter disabled checks
-            result.findings = [f for f in result.findings if f.check_id not in self.disabled_checks]
+            # Filter disabled checks and recalculate score
+            if self.disabled_checks:
+                result.findings = [f for f in result.findings if f.check_id not in self.disabled_checks]
+                # Recalculate score from remaining findings
+                score = 100
+                for f in result.findings:
+                    if f.severity == Severity.CRITICAL:
+                        score -= 15
+                    elif f.severity == Severity.WARNING:
+                        score -= 5
+                    else:
+                        score -= 2
+                result.score = max(0, score)
             category_results[cat_name] = result
 
         # Calculate overall score
