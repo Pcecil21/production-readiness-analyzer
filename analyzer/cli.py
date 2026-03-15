@@ -13,7 +13,7 @@ from analyzer.report import render_text_report, render_json_report
 
 VALID_CATEGORIES = list(CHECKER_MAP.keys())
 
-console = Console()
+console = Console(force_terminal=True)
 
 
 @click.command()

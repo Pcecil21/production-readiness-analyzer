@@ -56,9 +56,11 @@ class AnalysisEngine:
 
     @staticmethod
     def _matches_exclude(rel_path: str, pattern: str) -> bool:
-        """Simple exclusion matching — prefix or suffix."""
+        """Simple exclusion matching — exact directory prefix."""
         pattern = pattern.rstrip("/")
-        return rel_path.startswith(pattern) or f"/{pattern}/" in f"/{rel_path}/" or rel_path.startswith(f"{pattern}/")
+        # Split into path segments for exact matching (avoid .git matching .github)
+        parts = rel_path.split("/")
+        return pattern in parts or rel_path.startswith(f"{pattern}/")
 
     def run(self) -> AnalysisResult:
         files = self._collect_files()

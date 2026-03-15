@@ -32,7 +32,7 @@ def _score_label(score: int) -> str:
 
 def _bar(score: int, width: int = 20) -> str:
     filled = round(score / 100 * width)
-    return "\u2588" * filled + "\u2591" * (width - filled)
+    return "#" * filled + "-" * (width - filled)
 
 
 def render_text_report(result: AnalysisResult, console: Console) -> None:
